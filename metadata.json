@@ -1,0 +1,6 @@
+{
+  "name": "Time Capsule Messages",
+  "description": "A secure, shared time capsule application where admins can lock messages until a specific date and time, and visitors can watch the countdown to the unlock event.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

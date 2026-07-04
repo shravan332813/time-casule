@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "AdminConfig": {
+      "title": "AdminConfig",
+      "description": "Stores admin PIN or password hash for authentication.",
+      "type": "object",
+      "properties": {
+        "pinHash": { "type": "string", "description": "SHA-256 hash of the admin access code" },
+        "setupComplete": { "type": "boolean", "description": "Whether the admin access code has been configured" }
+      },
+      "required": ["pinHash", "setupComplete"]
+    },
+    "Capsule": {
+      "title": "Capsule",
+      "description": "A time capsule containing a message locked until a future date and time.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the time capsule" },
+        "message": { "type": "string", "description": "The secret locked message" },
+        "teaser": { "type": "string", "description": "A hint or teaser of what lies inside" },
+        "unlockAt": { "type": "string", "description": "ISO timestamp when the capsule unlocks" },
+        "createdAt": { "type": "string", "description": "ISO timestamp when the capsule was created" },
+        "theme": { "type": "string", "description": "Visual theme identifier for styling" },
+        "creator": { "type": "string", "description": "Name or nickname of the creator" }
+      },
+      "required": ["title", "message", "unlockAt", "createdAt", "theme"]
+    }
+  },
+  "firestore": {
+    "/config/{configId}": {
+      "schema": "AdminConfig",
+      "description": "Global admin authentication config."
+    },
+    "/capsules/{capsuleId}": {
+      "schema": "Capsule",
+      "description": "Collection of locked and unlocked time capsules."
+    }
+  }
+}
