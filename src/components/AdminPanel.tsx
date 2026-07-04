@@ -12,6 +12,8 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ adminUsername, adminPassword, capsules, onRefresh, onLogout }: AdminPanelProps) {
+  const visibleCapsules = capsules.filter(c => c.id !== "capsule_govarthan" && c.title !== "Govarthan");
+
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [teaser, setTeaser] = useState("");
@@ -335,18 +337,18 @@ export default function AdminPanel({ adminUsername, adminPassword, capsules, onR
         {/* Right Side: Capsule List (5 cols on lg) */}
         <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <div className="pb-3 border-b border-slate-800">
-            <h2 className="text-base font-semibold text-slate-100">Bury Vaults ({capsules.length})</h2>
+            <h2 className="text-base font-semibold text-slate-100">Bury Vaults ({visibleCapsules.length})</h2>
             <p className="text-xs text-slate-400 mt-0.5">Manage existing time capsules in the system.</p>
           </div>
 
-          {capsules.length === 0 ? (
+          {visibleCapsules.length === 0 ? (
             <div className="py-12 text-center text-slate-500">
               <Lock className="w-8 h-8 mx-auto stroke-1 text-slate-600 mb-2" />
               <p className="text-sm">No time capsules have been sealed yet.</p>
             </div>
           ) : (
             <div className="space-y-3.5 max-h-[580px] overflow-y-auto pr-1">
-              {capsules.map((capsule) => {
+              {visibleCapsules.map((capsule) => {
                 const isLocked = capsule.isLocked;
                 const config = THEME_PRESETS[capsule.theme as ThemeType] || THEME_PRESETS.cosmic;
                 
