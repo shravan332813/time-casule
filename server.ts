@@ -7,6 +7,14 @@ import { createClient } from "@supabase/supabase-js";
 import { createServer as createViteServer } from "vite";
 
 // Load Environment Variables
+if (!fs.existsSync(path.join(process.cwd(), ".env")) && fs.existsSync(path.join(process.cwd(), ".env.example"))) {
+  try {
+    fs.copyFileSync(path.join(process.cwd(), ".env.example"), path.join(process.cwd(), ".env"));
+    console.log("Copied .env.example to .env because .env was missing.");
+  } catch (err) {
+    console.error("Failed to copy .env.example to .env:", err);
+  }
+}
 dotenv.config();
 
 interface Capsule {
@@ -29,7 +37,13 @@ const cleanEnvVar = (val: string | undefined): string => {
 };
 
 const rawSupabaseUrl = process.env.SUPABASE_URL || "https://uenknkacrhrikglbbhcn.supabase.co";
-const supabaseUrl = cleanEnvVar(rawSupabaseUrl);
+let supabaseUrl = cleanEnvVar(rawSupabaseUrl);
+
+// If the URL is just the project reference (e.g. "uenknkacrhrikglbbhcn"), construct the full Supabase URL
+if (supabaseUrl && !supabaseUrl.startsWith("http://") && !supabaseUrl.startsWith("https://")) {
+  supabaseUrl = `https://${supabaseUrl}.supabase.co`;
+}
+
 const supabaseServiceKey = cleanEnvVar(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 let supabase: any = null;
@@ -108,7 +122,7 @@ async function seedDefaultCapsules() {
     try {
       const { data, error } = await supabase
         .from("capsules")
-        .select("id, unlock_at, unlockAt")
+        .select("id, unlock_at")
         .eq("id", "capsule_govarthan")
         .maybeSingle();
 
@@ -129,16 +143,12 @@ async function seedDefaultCapsules() {
         if (insertError) throw insertError;
         console.log("Successfully seeded Govarthan capsule to Supabase.");
       } else {
-        const currentUnlockAt = data.unlock_at || data.unlockAt;
+        const currentUnlockAt = data.unlock_at;
         if (currentUnlockAt !== targetUnlockAt) {
           const updateObj: any = {
-            teaser: "Sealed until 18/1/2031, 12 am"
+            teaser: "Sealed until 18/1/2031, 12 am",
+            unlock_at: targetUnlockAt
           };
-          if (data.unlock_at !== undefined) {
-            updateObj.unlock_at = targetUnlockAt;
-          } else {
-            updateObj.unlockAt = targetUnlockAt;
-          }
 
           const { error: updateError } = await supabase
             .from("capsules")
