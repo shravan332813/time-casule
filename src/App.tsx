@@ -118,7 +118,7 @@ export default function App() {
               <Lock className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-slate-100 tracking-tight text-base sm:text-lg">Time Capsule Vault</span>
+              <span className="font-bold text-slate-100 tracking-tight text-base sm:text-lg">Time Capsule storage</span>
             </div>
           </div>
 
@@ -192,7 +192,7 @@ export default function App() {
                 Bury messages in the fabric of time.
               </h1>
               <p className="text-sm md:text-base text-slate-400 leading-relaxed font-normal">
-                Time Capsule Vault allows individuals to seal digital statements, predictions, and letters that are locked cryptographically on the server until their exact specified unsealing hour.
+                Time Capsule Storage allows individuals to seal digital statements, predictions, and letters that are locked cryptographically on the server until their exact specified unsealing hour.
               </p>
               
               <div className="flex items-center justify-center gap-6 text-xs text-slate-500 pt-1 border-t border-slate-900 w-1/2 mx-auto">
