@@ -35,19 +35,29 @@ export default function App() {
     try {
       setAppError(null);
       const configRes = await fetch("/api/config");
-      const configData = await configRes.json();
-      if (configRes.ok) {
-        setConfig(configData);
-      } else {
-        throw new Error(configData.error || "Failed to fetch configuration");
+      if (!configRes.ok) {
+        throw new Error(`Failed to fetch configuration (Status: ${configRes.status})`);
       }
+      const configContentType = configRes.headers.get("content-type");
+      if (!configContentType || !configContentType.includes("application/json")) {
+        throw new Error("Server returned an invalid non-JSON response instead of configuration.");
+      }
+      const configData = await configRes.json();
+      setConfig(configData);
 
       const capsulesRes = await fetch("/api/capsules");
+      if (!capsulesRes.ok) {
+        throw new Error(`Failed to fetch capsules database (Status: ${capsulesRes.status})`);
+      }
+      const capsulesContentType = capsulesRes.headers.get("content-type");
+      if (!capsulesContentType || !capsulesContentType.includes("application/json")) {
+        throw new Error("Server returned an invalid non-JSON response instead of capsules list.");
+      }
       const capsulesData = await capsulesRes.json();
-      if (capsulesRes.ok && Array.isArray(capsulesData)) {
+      if (Array.isArray(capsulesData)) {
         setCapsules(capsulesData);
       } else {
-        throw new Error(capsulesData.error || "Failed to fetch capsules database");
+        throw new Error("Failed to load valid capsules database structure.");
       }
     } catch (err) {
       console.error("Failed to fetch initial application data", err);

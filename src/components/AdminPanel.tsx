@@ -72,9 +72,14 @@ export default function AdminPanel({ adminUsername, adminPassword, capsules, onR
         })
       });
 
-      const data = await response.json();
+      let data: any = {};
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
+      
       if (!response.ok) {
-        throw new Error(data.error || "Failed to seal time capsule");
+        throw new Error(data.error || `Failed to seal time capsule (Status: ${response.status})`);
       }
 
       setSuccess(true);
@@ -112,8 +117,15 @@ export default function AdminPanel({ adminUsername, adminPassword, capsules, onR
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to delete capsule");
+        let errorMsg = "Failed to delete capsule";
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          errorMsg = data.error || errorMsg;
+        } else {
+          errorMsg += ` (Status: ${response.status})`;
+        }
+        throw new Error(errorMsg);
       }
 
       onRefresh();
