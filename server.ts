@@ -7,14 +7,6 @@ import { createClient } from "@supabase/supabase-js";
 import { createServer as createViteServer } from "vite";
 
 // Load Environment Variables
-if (!fs.existsSync(path.join(process.cwd(), ".env")) && fs.existsSync(path.join(process.cwd(), ".env.example"))) {
-  try {
-    fs.copyFileSync(path.join(process.cwd(), ".env.example"), path.join(process.cwd(), ".env"));
-    console.log("Copied .env.example to .env because .env was missing.");
-  } catch (err) {
-    console.error("Failed to copy .env.example to .env:", err);
-  }
-}
 dotenv.config();
 
 interface Capsule {
