@@ -46,29 +46,64 @@ if (supabaseUrl && !supabaseUrl.startsWith("http://") && !supabaseUrl.startsWith
 
 const supabaseServiceKey = cleanEnvVar(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+const fetchWithTimeout = (timeoutMs = 3000) => {
+  return async (url: string, options: any = {}) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(id);
+      return response;
+    } catch (err) {
+      clearTimeout(id);
+      throw err;
+    }
+  };
+};
+
 let supabase: any = null;
 if (supabaseUrl && supabaseServiceKey) {
   try {
-    supabase = createClient(supabaseUrl, supabaseServiceKey);
+    supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      global: {
+        fetch: fetchWithTimeout(3000), // 3-second timeout for Supabase operations
+      },
+    });
   } catch (err) {
     console.error("Failed to initialize Supabase client:", err);
   }
 }
 
+let lastSupabaseCheckTime = 0;
+let cachedSupabaseActive = false;
+const CACHE_TTL = 30000; // 30 seconds cache TTL
+
 // Check if Supabase is active and capsules table exists
 async function isSupabaseActive(): Promise<boolean> {
   if (!supabase) return false;
+  const now = Date.now();
+  if (now - lastSupabaseCheckTime < CACHE_TTL) {
+    return cachedSupabaseActive;
+  }
+
   try {
     const { error } = await supabase.from("capsules").select("id").limit(1);
     if (error) {
       console.warn("Supabase table 'capsules' query warning:", error.message);
-      return false;
+      cachedSupabaseActive = false;
+    } else {
+      cachedSupabaseActive = true;
     }
-    return true;
   } catch (err) {
     console.warn("Supabase connection check failed, using local fallback:", err);
-    return false;
+    cachedSupabaseActive = false;
   }
+
+  lastSupabaseCheckTime = Date.now();
+  return cachedSupabaseActive;
 }
 
 // Local File Helper Functions
@@ -290,9 +325,6 @@ async function startServer() {
   // Get all Time Capsules
   app.get("/api/capsules", async (req, res) => {
     try {
-      // Ensure Govarthan capsule exists
-      await seedDefaultCapsules();
-
       let capsulesList: Capsule[] = [];
 
       if (await isSupabaseActive()) {
