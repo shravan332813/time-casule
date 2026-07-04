@@ -20,8 +20,6 @@ interface Capsule {
   creator: string;
 }
 
-const CAPSULES_FILE = path.join(process.cwd(), "capsules-db.json");
-
 // Initialize Supabase Client
 const cleanEnvVar = (val: string | undefined): string => {
   if (!val) return "";
@@ -38,84 +36,12 @@ if (supabaseUrl && !supabaseUrl.startsWith("http://") && !supabaseUrl.startsWith
 
 const supabaseServiceKey = cleanEnvVar(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const fetchWithTimeout = (timeoutMs = 3000) => {
-  return async (url: string, options: any = {}) => {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-      });
-      clearTimeout(id);
-      return response;
-    } catch (err) {
-      clearTimeout(id);
-      throw err;
-    }
-  };
-};
-
 let supabase: any = null;
 if (supabaseUrl && supabaseServiceKey) {
   try {
-    supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      global: {
-        fetch: fetchWithTimeout(3000), // 3-second timeout for Supabase operations
-      },
-    });
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
   } catch (err) {
     console.error("Failed to initialize Supabase client:", err);
-  }
-}
-
-let lastSupabaseCheckTime = 0;
-let cachedSupabaseActive = false;
-const CACHE_TTL = 30000; // 30 seconds cache TTL
-
-// Check if Supabase is active and capsules table exists
-async function isSupabaseActive(): Promise<boolean> {
-  if (!supabase) return false;
-  const now = Date.now();
-  if (now - lastSupabaseCheckTime < CACHE_TTL) {
-    return cachedSupabaseActive;
-  }
-
-  try {
-    const { error } = await supabase.from("capsules").select("id").limit(1);
-    if (error) {
-      console.warn("Supabase table 'capsules' query warning:", error.message);
-      cachedSupabaseActive = false;
-    } else {
-      cachedSupabaseActive = true;
-    }
-  } catch (err) {
-    console.warn("Supabase connection check failed, using local fallback:", err);
-    cachedSupabaseActive = false;
-  }
-
-  lastSupabaseCheckTime = Date.now();
-  return cachedSupabaseActive;
-}
-
-// Local File Helper Functions
-function getCapsulesFromFile(): Capsule[] {
-  try {
-    if (fs.existsSync(CAPSULES_FILE)) {
-      const data = fs.readFileSync(CAPSULES_FILE, "utf8");
-      return JSON.parse(data);
-    }
-  } catch (err) {
-    console.error("Error reading capsules file:", err);
-  }
-  return [];
-}
-
-function saveCapsulesToFile(capsules: Capsule[]) {
-  try {
-    fs.writeFileSync(CAPSULES_FILE, JSON.stringify(capsules, null, 2), "utf8");
-  } catch (err) {
-    console.error("Error writing to capsules file:", err);
   }
 }
 
@@ -145,68 +71,53 @@ async function seedDefaultCapsules() {
     creator: "Admin"
   };
 
-  if (await isSupabaseActive()) {
-    try {
-      const { data, error } = await supabase
-        .from("capsules")
-        .select("id, unlock_at")
-        .eq("id", "capsule_govarthan")
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (!data) {
-        // Insert default capsule
-        const { error: insertError } = await supabase.from("capsules").insert({
-          id: defaultCapsule.id,
-          title: defaultCapsule.title,
-          message: defaultCapsule.message,
-          teaser: defaultCapsule.teaser,
-          unlock_at: defaultCapsule.unlockAt,
-          created_at: defaultCapsule.createdAt,
-          theme: defaultCapsule.theme,
-          creator: defaultCapsule.creator
-        });
-        if (insertError) throw insertError;
-        console.log("Successfully seeded Govarthan capsule to Supabase.");
-      } else {
-        const currentUnlockAt = data.unlock_at;
-        if (currentUnlockAt !== targetUnlockAt) {
-          const updateObj: any = {
-            teaser: "Sealed until 18/1/2031, 12 am",
-            unlock_at: targetUnlockAt
-          };
-
-          const { error: updateError } = await supabase
-            .from("capsules")
-            .update(updateObj)
-            .eq("id", "capsule_govarthan");
-
-          if (updateError) throw updateError;
-          console.log("Updated Govarthan capsule unlock date in Supabase.");
-        }
-      }
-      return;
-    } catch (err: any) {
-      console.error("Supabase seeding failed, falling back to local file:", err.message);
-    }
+  if (!supabase) {
+    console.warn("Supabase client is not initialized, skipping seed.");
+    return;
   }
 
-  // Local Seeding Fallback
-  const capsules = getCapsulesFromFile();
-  const index = capsules.findIndex(c => c.id === "capsule_govarthan");
+  try {
+    const { data, error } = await supabase
+      .from("capsules")
+      .select("id, unlock_at")
+      .eq("id", "capsule_govarthan")
+      .maybeSingle();
 
-  if (index === -1) {
-    capsules.push(defaultCapsule);
-    saveCapsulesToFile(capsules);
-    console.log("Successfully seeded Govarthan capsule locally.");
-  } else {
-    if (capsules[index].unlockAt !== targetUnlockAt) {
-      capsules[index].unlockAt = targetUnlockAt;
-      capsules[index].teaser = "Sealed until 18/1/2031, 12 am";
-      saveCapsulesToFile(capsules);
-      console.log("Updated Govarthan capsule unlock date locally.");
+    if (error) throw error;
+
+    if (!data) {
+      // Insert default capsule
+      const { error: insertError } = await supabase.from("capsules").insert({
+        id: defaultCapsule.id,
+        title: defaultCapsule.title,
+        message: defaultCapsule.message,
+        teaser: defaultCapsule.teaser,
+        unlock_at: defaultCapsule.unlockAt,
+        created_at: defaultCapsule.createdAt,
+        theme: defaultCapsule.theme,
+        creator: defaultCapsule.creator
+      });
+      if (insertError) throw insertError;
+      console.log("Successfully seeded Govarthan capsule to Supabase.");
+    } else {
+      const currentUnlockAt = data.unlock_at;
+      if (currentUnlockAt !== targetUnlockAt) {
+        const updateObj: any = {
+          teaser: "Sealed until 18/1/2031, 12 am",
+          unlock_at: targetUnlockAt
+        };
+
+        const { error: updateError } = await supabase
+          .from("capsules")
+          .update(updateObj)
+          .eq("id", "capsule_govarthan");
+
+        if (updateError) throw updateError;
+        console.log("Updated Govarthan capsule unlock date in Supabase.");
+      }
     }
+  } catch (err: any) {
+    console.error("Supabase seeding failed:", err.message);
   }
 }
 
@@ -250,40 +161,22 @@ async function startServer() {
       const id = "capsule_" + Math.random().toString(36).substring(2, 11);
       const createdAt = new Date().toISOString();
 
-      if (await isSupabaseActive()) {
-        try {
-          const insertData = {
-            id,
-            title,
-            message,
-            teaser: teaser || "",
-            unlock_at: unlockAt,
-            created_at: createdAt,
-            theme,
-            creator: creator || "Admin"
-          };
-          const { error } = await supabase.from("capsules").insert(insertData);
-          if (error) throw error;
-          return res.json({ success: true, id });
-        } catch (err: any) {
-          console.error("Supabase insert failed, attempting local fallback:", err.message);
-        }
+      if (!supabase) {
+        throw new Error("Supabase client is not initialized.");
       }
 
-      // Local fallback
-      const capsules = getCapsulesFromFile();
-      const newCapsule: Capsule = {
+      const insertData = {
         id,
         title,
         message,
         teaser: teaser || "",
-        unlockAt,
-        createdAt,
+        unlock_at: unlockAt,
+        created_at: createdAt,
         theme,
         creator: creator || "Admin"
       };
-      capsules.push(newCapsule);
-      saveCapsulesToFile(capsules);
+      const { error } = await supabase.from("capsules").insert(insertData);
+      if (error) throw error;
       return res.json({ success: true, id });
     } catch (error) {
       return res.status(500).json({ error: (error as Error).message });
@@ -294,20 +187,11 @@ async function startServer() {
   app.delete("/api/capsules/:id", requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
-      if (await isSupabaseActive()) {
-        try {
-          const { error } = await supabase.from("capsules").delete().eq("id", id);
-          if (error) throw error;
-          return res.json({ success: true });
-        } catch (err: any) {
-          console.error("Supabase delete failed, attempting local fallback:", err.message);
-        }
+      if (!supabase) {
+        throw new Error("Supabase client is not initialized.");
       }
-
-      // Local fallback
-      let capsules = getCapsulesFromFile();
-      capsules = capsules.filter(c => c.id !== id);
-      saveCapsulesToFile(capsules);
+      const { error } = await supabase.from("capsules").delete().eq("id", id);
+      if (error) throw error;
       return res.json({ success: true });
     } catch (error) {
       return res.status(500).json({ error: (error as Error).message });
@@ -317,21 +201,16 @@ async function startServer() {
   // Get all Time Capsules
   app.get("/api/capsules", async (req, res) => {
     try {
-      let capsulesList: Capsule[] = [];
+      if (!supabase) {
+        throw new Error("Supabase client is not initialized.");
+      }
 
-      if (await isSupabaseActive()) {
-        try {
-          const { data, error } = await supabase.from("capsules").select("*");
-          if (error) throw error;
-          if (data) {
-            capsulesList = data.map(mapRowToCapsule);
-          }
-        } catch (err: any) {
-          console.error("Supabase fetch failed, attempting local fallback:", err.message);
-          capsulesList = getCapsulesFromFile();
-        }
-      } else {
-        capsulesList = getCapsulesFromFile();
+      const { data, error } = await supabase.from("capsules").select("*");
+      if (error) throw error;
+
+      let capsulesList: Capsule[] = [];
+      if (data) {
+        capsulesList = data.map(mapRowToCapsule);
       }
 
       const now = new Date();

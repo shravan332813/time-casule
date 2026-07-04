@@ -162,13 +162,13 @@ export default function App() {
       {/* Main Container */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-8">
         {appError && (
-          <div id="firestore-connection-error" className="mb-6 p-4 bg-red-950/35 border border-red-500/35 rounded-2xl flex items-start gap-3 text-sm text-red-200">
+          <div id="supabase-connection-error" className="mb-6 p-4 bg-red-950/35 border border-red-500/35 rounded-2xl flex items-start gap-3 text-sm text-red-200">
             <span className="p-1 rounded-lg bg-red-500/10 text-red-400 shrink-0">⚠️</span>
             <div className="space-y-1">
               <h4 className="font-semibold text-red-100">Database Connection Alert</h4>
               <p className="text-xs text-red-300 leading-relaxed">
-                The application is having trouble reading or writing to the local file-system database: <code className="bg-red-950/80 px-1 py-0.5 rounded font-mono text-red-200">{appError}</code>. 
-                Please contact the administrator or verify file permissions.
+                The application is having trouble reading or writing to the Supabase database: <code className="bg-red-950/80 px-1 py-0.5 rounded font-mono text-red-200">{appError}</code>. 
+                Please contact the administrator or verify configuration.
               </p>
             </div>
           </div>
